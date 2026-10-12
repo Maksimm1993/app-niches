@@ -1,0 +1,79 @@
+name: Сбор данных
+
+on:
+  schedule:
+    - cron: "23 4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: collector
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    steps:
+      - name: Скачать код
+        uses: actions/checkout@v7
+
+      - name: Скачать сохранённую базу (ветка data)
+        uses: actions/checkout@v7
+        with:
+          ref: data
+          path: state
+        continue-on-error: true
+
+      - name: Установить Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Установить библиотеки
+        run: pip install -r requirements.txt
+
+      - name: Собрать данные
+        run: python collector.py
+
+      - name: Сохранить базу в ветку data
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p state && cd state
+          rm -rf .git
+          git init -q -b data
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -q -m "База на $(date -u +%F)"
+          git push -q --force "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" data
+
+      - name: Отчёт для скачивания (zip)
+        uses: actions/upload-artifact@v7
+        with:
+          name: report
+          path: site
+          retention-days: 14
+
+      - name: Подготовить сайт
+        if: vars.PAGES != 'off'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: site
+
+  deploy:
+    needs: collect
+    if: vars.PAGES != 'off'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Опубликовать сайт
+        id: deployment
+        uses: actions/deploy-pages@v5
