@@ -1,0 +1,212 @@
+# Поисковые запросы для App Store США — по одному на строку, на английском.
+# Добавляйте свои. Строки, начинающиеся с #, пропускаются.
+# Программа сама находит новые запросы через автоподсказки App Store.
+
+# Продуктивность и утилиты
+habit tracker
+to do list
+planner
+journal
+notes
+pdf scanner
+document scanner
+pdf editor
+fax
+e-signature
+invoice maker
+receipt scanner
+time tracker
+focus timer
+pomodoro
+widget
+calculator
+unit converter
+qr code
+vpn
+password manager
+cleaner
+storage cleaner
+contacts cleanup
+file manager
+translator
+voice recorder
+transcribe
+call recorder
+teleprompter
+screen mirroring
+tv remote
+wifi analyzer
+printer
+
+# AI
+ai chat
+ai assistant
+ai photo
+ai headshot
+ai avatar
+ai video
+ai music
+ai homework
+math solver
+essay writer
+ai detector
+ai voice
+ai art generator
+ai interior design
+ai tattoo
+
+# Фото и видео
+photo editor
+video editor
+collage maker
+background remover
+face swap
+retouch
+filters
+slideshow
+video to mp3
+logo maker
+flyer maker
+thumbnail maker
+font
+wallpaper
+live wallpaper
+icon changer
+
+# Здоровье и фитнес
+workout
+home workout
+pilates
+wall pilates
+yoga
+running
+walking
+step counter
+intermittent fasting
+calorie counter
+meal planner
+water tracker
+sleep tracker
+sleep sounds
+white noise
+meditation
+breathing
+period tracker
+pregnancy
+baby tracker
+blood pressure
+heart rate
+glucose
+posture
+face yoga
+hair loss
+skin care
+quit smoking
+sober
+
+# Образование
+learn language
+learn english
+learn spanish
+flashcards
+typing
+learn piano
+learn guitar
+chess
+coding
+reading for kids
+bible
+quran
+astronomy
+plant identifier
+bird identifier
+mushroom identifier
+rock identifier
+coin identifier
+insect identifier
+
+# Образ жизни и хобби
+horoscope
+astrology
+tarot
+dream journal
+manifestation
+affirmations
+dating
+couples
+relationship
+pet care
+dog training
+cat translator
+gardening
+recipe
+grocery list
+cooking
+wine
+cocktail
+home design
+room planner
+car maintenance
+fuel
+parking
+travel planner
+packing list
+flight tracker
+weather radar
+tide
+fishing
+hunting
+golf
+pickleball
+tennis
+metal detector
+stud finder
+measure
+level tool
+
+# Финансы
+budget
+expense tracker
+bill reminder
+subscription tracker
+credit score
+stock tracker
+crypto
+debt payoff
+tip calculator
+mileage tracker
+
+# Бизнес
+crm
+appointment scheduler
+timesheet
+inventory
+point of sale
+business card
+resume builder
+real estate
+estimate
+contractor
+
+# Развлечения и музыка
+ringtone
+music player
+offline music
+podcast
+karaoke
+drum
+dj
+piano
+guitar tuner
+metronome
+soundboard
+prank
+fake call
+coloring
+sticker maker
+emoji
+anime
+manga
+comics
+audiobooks
+stories

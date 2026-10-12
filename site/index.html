@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Ниши App Store (США)</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#E8ECF0; --paper:#F7F9FB; --ink:#16233A; --muted:#5A6A7F; --line:#CDD5DF;
+  --money:#0B7A5A; --band:#A6DAC2; --heat:#A85F07; --heatbg:#F6E7CF; --focus:#2F5BD3;
+  --ui:"Onest",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  --display:"Unbounded","Onest",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10151C; --paper:#171F29; --ink:#DCE4EE; --muted:#8C9AAC; --line:#2A3542;
+  --money:#41C49C; --band:#1F5444; --heat:#EBA54A; --heatbg:#3A2A12; --focus:#7EA2FF;
+}}
+:root[data-theme="dark"]{
+  --bg:#10151C; --paper:#171F29; --ink:#DCE4EE; --muted:#8C9AAC; --line:#2A3542;
+  --money:#41C49C; --band:#1F5444; --heat:#EBA54A; --heatbg:#3A2A12; --focus:#7EA2FF;
+}
+*{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--ui);font-variant-numeric:tabular-nums}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.wrap{max-width:1500px;margin:0 auto;padding:28px 20px 48px}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 32px;margin-bottom:22px}
+h1{font:700 clamp(28px,4.4vw,52px)/1 var(--display);letter-spacing:-.02em;margin:0}
+h1 small{display:block;font:500 15px/1.4 var(--ui);letter-spacing:0;color:var(--muted);margin-top:10px}
+#status{color:var(--muted);margin:0;max-width:60ch}
+#status b{color:var(--ink);font-weight:600}
+
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:16px}
+.tab{white-space:nowrap;appearance:none;border:0;background:none;color:var(--muted);font:600 15px var(--ui);padding:10px 14px 12px;cursor:pointer;border-bottom:3px solid transparent;margin-bottom:-1px}
+.tab[aria-selected="true"]{color:var(--ink);border-color:var(--ink)}
+.tab .n{font:500 13px var(--display);margin-left:6px;color:var(--muted)}
+.tabnote{color:var(--muted);margin:0 0 14px;max-width:80ch}
+
+.filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px 14px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+.filters label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.filters .wide{grid-column:span 2}
+input,select{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;min-width:0}
+.pair{display:flex;gap:6px}
+.actions{display:flex;gap:8px;align-items:flex-end}
+button.btn{font:600 14px var(--ui);color:var(--ink);background:none;border:1px solid var(--line);border-radius:6px;padding:8px 12px;cursor:pointer;white-space:nowrap}
+button.btn:hover{border-color:var(--ink)}
+
+.count{color:var(--muted);font-size:14px;margin:0 0 8px}
+.tablewrap{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:1180px}
+th,td{padding:9px 10px;text-align:right;border-bottom:1px solid var(--line);vertical-align:middle}
+th:first-child,td:first-child,th.l,td.l{text-align:left}
+thead th{position:sticky;top:0;background:var(--paper);font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;user-select:none;white-space:nowrap}
+thead th:hover{color:var(--ink)}
+thead th[aria-sort]{color:var(--ink)}
+thead th[aria-sort="descending"]::after{content:" ▾"}
+thead th[aria-sort="ascending"]::after{content:" ▴"}
+tbody tr:hover{background:color-mix(in srgb,var(--bg) 60%,transparent)}
+td.app{max-width:300px}
+td.app a{font-weight:600;text-decoration:none;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+td.app a:hover{text-decoration:underline}
+td.app span{display:block;color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+td.cat{color:var(--muted);font-size:13px;white-space:nowrap}
+.dim{color:var(--muted)}
+.approx{color:var(--muted);cursor:help}
+
+/* Выручка: число + шкала (логарифм от $100 до $10 млн) с подсвеченной целевой зоной */
+.rev{display:grid;grid-template-columns:auto 96px;gap:10px;align-items:center;justify-content:end}
+.rev b{font-weight:600}
+.rev small{display:block;font-size:12px;color:var(--muted);font-weight:400;white-space:nowrap}
+.rev small.chart{color:var(--money)}
+.scale{position:relative;height:8px;border-radius:4px;background:var(--bg);box-shadow:inset 0 0 0 1px var(--line)}
+.scale .zone{position:absolute;top:0;bottom:0;background:var(--band);border-radius:2px}
+.scale .tick{position:absolute;top:-3px;width:3px;height:14px;border-radius:2px;background:var(--muted);transform:translateX(-1px)}
+.scale .tick.in{background:var(--money)}
+.hot{color:var(--heat);font-weight:600}
+.badge{display:inline-block;font-size:12px;font-weight:600;color:var(--heat);background:var(--heatbg);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+
+.pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px;color:var(--muted);font-size:14px}
+.empty{padding:40px 20px;text-align:left;color:var(--muted)}
+.empty b{color:var(--ink)}
+
+details.help{margin-top:28px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:14px 18px;max-width:900px}
+details.help summary{cursor:pointer;font-weight:600}
+details.help p,details.help li{color:var(--muted);max-width:78ch}
+details.help table{min-width:0;width:auto;margin-top:6px}
+details.help td,details.help th{font-size:13px;padding:4px 10px}
+@media (max-width:640px){.wrap{padding:18px 12px 36px}.filters .wide{grid-column:span 1}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Ниши App Store<small>США · приложения с выручкой ниже топ-200</small></h1>
+    <p id="status">Загружаю данные…</p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-cand" aria-selected="true">Кандидаты<span class="n" id="n-cand"></span></button>
+    <button class="tab" role="tab" id="tab-all" aria-selected="false">Все приложения<span class="n" id="n-all"></span></button>
+  </div>
+  <p class="tabnote" id="tabnote"></p>
+
+  <div class="filters">
+    <label class="wide">Название или разработчик<input id="f-q" type="search" placeholder="например, scanner"></label>
+    <label>Категория<select id="f-cat"><option value="">Все</option></select></label>
+    <label>Выручка, $/мес<span class="pair"><input id="f-rmin" type="number" min="0" placeholder="от"><input id="f-rmax" type="number" min="0" placeholder="до"></span></label>
+    <label>Оценок в день, от<input id="f-rpd" type="number" min="0" step="0.5"></label>
+    <label>Оценок всего<span class="pair"><input id="f-cmin" type="number" min="0" placeholder="от"><input id="f-cmax" type="number" min="0" placeholder="до"></span></label>
+    <label>Цена<select id="f-price"><option value="">Любая</option><option value="free">Бесплатные</option><option value="paid">Платные</option></select></label>
+    <label>Релиз не раньше<input id="f-rel" type="date"></label>
+    <label>Источник выручки<select id="f-src"><option value="">Любой</option><option value="model">Только модель (вне чартов)</option><option value="chart">Только по чарту</option></select></label>
+    <div class="actions"><button class="btn" id="b-reset">Сбросить</button><button class="btn" id="b-csv">Скачать CSV</button></div>
+  </div>
+
+  <p class="count" id="count"></p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr id="head"></tr></thead>
+      <tbody id="body"></tbody>
+    </table>
+  </div>
+  <div class="pager"><button class="btn" id="b-prev">Назад</button><span id="pageinfo"></span><button class="btn" id="b-next">Дальше</button></div>
+
+  <details class="help">
+    <summary>Как читать цифры</summary>
+    <ul>
+      <li><b>Оценок в день</b> — сколько новых оценок приложение набирает в среднем за последние ~14 дней. Это главный сигнал: оценки растут вместе со скачиваниями. Значок ≈ значит, что истории замеров ещё мало и число посчитано грубо (все оценки ÷ возраст приложения).</li>
+      <li><b>Скачиваний в день</b> — оценки × коэффициент из настроек (по умолчанию 60). Очень приблизительно.</li>
+      <li><b>Выручка</b> — для приложений из Grossing-чартов считается по месту в чарте («по чарту»). Для остальных — по модели: новые оценки × «$ на одну оценку» в этой категории × поправка на цену покупок. «$ на оценку» калибруется каждый день на приложениях из чартов. Шкала справа — от $100 до $10 млн в месяц, зелёная зона — ваш целевой диапазон.</li>
+      <li><b>Рост за месяц</b> — сколько процентов от всех своих оценок приложение набирает за месяц. Высокий процент при небольшом числе оценок — признак быстро растущего новичка.</li>
+      <li><b>Покупки ≈</b> — медианная цена встроенных покупок со страницы App Store (есть не у всех).</li>
+    </ul>
+    <p>Калибровка «$ выручки на одну новую оценку» по категориям:</p>
+    <table><thead><tr><th class="l">Категория</th><th>$ на оценку</th><th>приложений в выборке</th></tr></thead><tbody id="calib"></tbody></table>
+  </details>
+</div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  "use strict";
+  // порядок полей в строке данных (как в collector.py → export)
+  const F={id:0,name:1,dev:2,cat:3,price:4,cnt:5,rat:6,rpd:7,hist:8,rev:9,chart:10,rank:11,rel:12,upd:13,mom:14,cand:15,iap:16,dl:17};
+  const D=window.APP_DATA||{rows:[]};
+  const rows=D.rows||[];
+  const TARGET=D.target||[5000,50000];
+  const PAGE=100;
+  const $=id=>document.getElementById(id);
+
+  const COLS=[
+    {k:"name",t:"Приложение",cls:"l"},
+    {k:"cat",t:"Категория",cls:"l"},
+    {k:"rev",t:"Выручка, $/мес"},
+    {k:"rpd",t:"Оценок в день"},
+    {k:"dl",t:"Скачиваний в день ≈"},
+    {k:"cnt",t:"Оценок всего"},
+    {k:"mom",t:"Рост за месяц"},
+    {k:"rat",t:"Рейтинг"},
+    {k:"price",t:"Цена"},
+    {k:"iap",t:"Покупки ≈"},
+    {k:"rel",t:"Релиз"},
+  ];
+
+  const state={tab:"cand",sort:"rev",dir:-1,page:0};
+  let view=[];
+
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const num=n=>Number(n).toLocaleString("ru-RU");
+  const short=x=>x.toFixed(x>=10?0:1).replace(/\.0$/,"");
+  function money(v){
+    if(v==null) return "—";
+    if(v>=1e6) return "$"+short(v/1e6)+" млн";
+    if(v>=1e3) return "$"+short(v/1e3)+" тыс";
+    return "$"+Math.round(v);
+  }
+  const L0=Math.log10(100), L1=Math.log10(1e7);
+  const pos=v=>Math.max(0,Math.min(100,(Math.log10(Math.max(v,1))-L0)/(L1-L0)*100));
+  const ZONE_L=pos(TARGET[0]), ZONE_W=pos(TARGET[1])-ZONE_L;
+  const fmtDate=s=>s?s.split("-").reverse().join("."):"—";
+
+  // статус
+  if(rows.length){
+    const d=new Date(D.updated+"T00:00:00");
+    $("status").innerHTML="Обновлено <b>"+d.toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"})+
+      "</b>. Отслеживается <b>"+num(D.tracked)+"</b> приложений, поисковых запросов: "+num(D.keywords)+
+      ". История замеров: "+D.history_days+" дн."+
+      (D.history_days<7?" Первую неделю прирост оценок считается грубо — точные цифры появятся через 7–14 дней.":"")+
+      (D.chart_ok===false?" Grossing-чарт сегодня не загрузился, выручка посчитана по запасной формуле.":"");
+  } else {
+    $("status").textContent="Данных пока нет.";
+  }
+  $("n-cand").textContent=num(D.candidates||0);
+  $("n-all").textContent=num(rows.length);
+
+  // категории
+  [...new Set(rows.map(r=>r[F.cat]))].filter(Boolean).sort().forEach(c=>{
+    const o=document.createElement("option"); o.value=c; o.textContent=c; $("f-cat").appendChild(o);
+  });
+  // калибровка
+  $("calib").innerHTML=(D.calib||[]).map(c=>"<tr><td class='l'>"+esc(c[0])+"</td><td>$"+c[1]+"</td><td>"+c[2]+"</td></tr>").join("")+
+    (D.global_k?"<tr><td class='l'><b>Все категории</b></td><td>$"+D.global_k+"</td><td></td></tr>":"");
+
+  // заголовки
+  $("head").innerHTML=COLS.map(c=>"<th class='"+(c.cls||"")+"' data-k='"+c.k+"' tabindex='0'>"+c.t+"</th>").join("");
+  $("head").querySelectorAll("th").forEach(th=>{
+    const go=()=>{const k=th.dataset.k; if(state.sort===k) state.dir*=-1; else {state.sort=k; state.dir=(k==="name"||k==="cat")?1:-1;} state.page=0; update();};
+    th.addEventListener("click",go);
+    th.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});
+  });
+
+  const val=id=>$(id).value.trim();
+  const nOrNull=id=>val(id)===""?null:Number(val(id));
+
+  function filtered(){
+    const q=val("f-q").toLowerCase(), cat=val("f-cat"), price=val("f-price"), src=val("f-src"), rel=val("f-rel");
+    const rmin=nOrNull("f-rmin"), rmax=nOrNull("f-rmax"), rpd=nOrNull("f-rpd"), cmin=nOrNull("f-cmin"), cmax=nOrNull("f-cmax");
+    return rows.filter(r=>{
+      if(state.tab==="cand" && !r[F.cand]) return false;
+      if(q && !(r[F.name].toLowerCase().includes(q)||r[F.dev].toLowerCase().includes(q))) return false;
+      if(cat && r[F.cat]!==cat) return false;
+      if(price==="free" && r[F.price]>0) return false;
+      if(price==="paid" && !(r[F.price]>0)) return false;
+      if(src==="model" && r[F.chart]) return false;
+      if(src==="chart" && !r[F.chart]) return false;
+      if(rel && (r[F.rel]||"")<rel) return false;
+      if(rmin!=null && r[F.rev]<rmin) return false;
+      if(rmax!=null && r[F.rev]>rmax) return false;
+      if(rpd!=null && r[F.rpd]<rpd) return false;
+      if(cmin!=null && r[F.cnt]<cmin) return false;
+      if(cmax!=null && r[F.cnt]>cmax) return false;
+      return true;
+    });
+  }
+
+  function sortRows(list){
+    const i=F[state.sort], d=state.dir;
+    return list.sort((a,b)=>{
+      let x=a[i], y=b[i];
+      if(x==null||x==="") return 1; if(y==null||y==="") return -1;
+      if(typeof x==="string") return x.localeCompare(y)*d;
+      return (x-y)*d;
+    });
+  }
+
+  function rowHtml(r){
+    const url="https://apps.apple.com/us/app/id"+r[F.id];
+    const v=r[F.rev], inZone=v>=TARGET[0]&&v<=TARGET[1];
+    const src=r[F.chart]?"<small class='chart'>по чарту "+esc(r[F.rank])+"</small>":"<small>по модели</small>";
+    const approx=r[F.hist]?"":"<span class='approx' title='Мало истории замеров: посчитано грубо, по возрасту приложения'>≈ </span>";
+    const mom=r[F.mom]*100;
+    return "<tr>"+
+      "<td class='app'><a href='"+url+"' target='_blank' rel='noopener'>"+esc(r[F.name])+"</a><span>"+esc(r[F.dev])+"</span></td>"+
+      "<td class='cat l'>"+esc(r[F.cat])+(r[F.cand]&&state.tab==="all"?"<span class='badge'>кандидат</span>":"")+"</td>"+
+      "<td><div class='rev'><div><b>"+money(v)+"</b>"+src+"</div><div class='scale' aria-hidden='true'><div class='zone' style='left:"+ZONE_L+"%;width:"+ZONE_W+"%'></div><div class='tick"+(inZone?" in":"")+"' style='left:"+pos(v)+"%'></div></div></div></td>"+
+      "<td>"+approx+(r[F.rpd]>=10?"<span class='hot'>":"<span>")+r[F.rpd].toLocaleString("ru-RU",{maximumFractionDigits:1})+"</span></td>"+
+      "<td class='dim'>"+num(r[F.dl])+"</td>"+
+      "<td>"+num(r[F.cnt])+"</td>"+
+      "<td>"+(mom>=10?"<span class='hot'>":"<span>")+mom.toLocaleString("ru-RU",{maximumFractionDigits:mom<10?1:0})+"%</span></td>"+
+      "<td>"+(r[F.rat]?r[F.rat].toFixed(1):"—")+"</td>"+
+      "<td>"+(r[F.price]>0?"$"+r[F.price].toFixed(2):"<span class='dim'>бесплатно</span>")+"</td>"+
+      "<td class='dim'>"+(r[F.iap]?"$"+r[F.iap].toFixed(2):"—")+"</td>"+
+      "<td>"+fmtDate(r[F.rel])+"</td>"+
+    "</tr>";
+  }
+
+  function update(){
+    view=sortRows(filtered());
+    const pages=Math.max(1,Math.ceil(view.length/PAGE));
+    state.page=Math.min(state.page,pages-1);
+    const slice=view.slice(state.page*PAGE,(state.page+1)*PAGE);
+    if(!rows.length){
+      $("body").innerHTML="<tr><td colspan='"+COLS.length+"' class='empty'><b>Данных пока нет.</b><br>Запустите сбор: вкладка Actions в репозитории → «Сбор данных» → Run workflow. Через 30–60 минут обновите эту страницу.</td></tr>";
+    } else if(!slice.length){
+      $("body").innerHTML="<tr><td colspan='"+COLS.length+"' class='empty'><b>Под эти фильтры ничего не подходит.</b><br>Ослабьте условия или нажмите «Сбросить».</td></tr>";
+    } else {
+      $("body").innerHTML=slice.map(rowHtml).join("");
+    }
+    $("count").textContent="Показано "+num(view.length)+" из "+num(state.tab==="cand"?(D.candidates||0):rows.length);
+    $("pageinfo").textContent="стр. "+(state.page+1)+" из "+pages;
+    $("b-prev").disabled=state.page===0; $("b-next").disabled=state.page>=pages-1;
+    $("head").querySelectorAll("th").forEach(th=>{
+      if(th.dataset.k===state.sort) th.setAttribute("aria-sort",state.dir<0?"descending":"ascending"); else th.removeAttribute("aria-sort");
+    });
+    $("tabnote").textContent=state.tab==="cand"
+      ?"Молодые приложения (до 2 лет) с выручкой "+money(TARGET[0])+"–"+money(TARGET[1])+" в месяц, быстрым приростом оценок и небольшим общим числом оценок. Условия меняются в config.yaml."
+      :"Все приложения с оценкой выручки от $1 тыс в месяц, включая чарты. Используйте фильтры, чтобы сузить список.";
+  }
+
+  function setTab(t){
+    state.tab=t; state.page=0;
+    $("tab-cand").setAttribute("aria-selected",t==="cand"); $("tab-all").setAttribute("aria-selected",t==="all");
+    update();
+  }
+  $("tab-cand").onclick=()=>setTab("cand");
+  $("tab-all").onclick=()=>setTab("all");
+
+  let timer;
+  document.querySelectorAll(".filters input,.filters select").forEach(el=>{
+    el.addEventListener("input",()=>{clearTimeout(timer); timer=setTimeout(()=>{state.page=0; update();},200);});
+  });
+  $("b-reset").onclick=()=>{document.querySelectorAll(".filters input,.filters select").forEach(el=>el.value=""); state.page=0; update();};
+  $("b-prev").onclick=()=>{state.page--; update(); window.scrollTo({top:0});};
+  $("b-next").onclick=()=>{state.page++; update(); window.scrollTo({top:0});};
+
+  $("b-csv").onclick=()=>{
+    const head=["id","name","developer","category","revenue_usd_month","revenue_source","chart_rank","ratings_per_day","downloads_per_day","ratings_total","growth_month_pct","rating","price","iap_median","release","last_update","candidate","url"];
+    const q=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
+    const lines=view.map(r=>[r[F.id],q(r[F.name]),q(r[F.dev]),q(r[F.cat]),r[F.rev],r[F.chart]?"chart":"model",q(r[F.rank]),r[F.rpd],r[F.dl],r[F.cnt],(r[F.mom]*100).toFixed(1),r[F.rat],r[F.price],r[F.iap]??"",r[F.rel],r[F.upd],r[F.cand],"https://apps.apple.com/us/app/id"+r[F.id]].join(","));
+    const blob=new Blob(["\ufeff"+head.join(",")+"\n"+lines.join("\n")],{type:"text/csv;charset=utf-8"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="app-niches-"+(D.updated||"data")+".csv";
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+
+  update();
+})();
+</script>
+</body>
+</html>
