@@ -14,6 +14,7 @@
   6. Сохранение базы (папка state/) и данных для сайта (site/data.js).
 """
 
+import csv
 import datetime as dt
 import html
 import json
@@ -127,8 +128,8 @@ _last_call = {}
 PAUSES = {"api": CFG["pause_api_sec"], "rss": CFG["pause_rss_sec"], "page": CFG["pause_page_sec"]}
 
 
-def get(url, params=None, kind="api", headers=None, as_json=True):
-    for attempt in range(4):
+def get(url, params=None, kind="api", headers=None, as_json=True, tries=4):
+    for attempt in range(tries):
         wait = _last_call.get(kind, 0) + PAUSES[kind] - time.time()
         if wait > 0:
             time.sleep(wait)
@@ -280,6 +281,29 @@ def read_keywords():
     return out
 
 
+def read_known():
+    """Реальная выручка из открытых источников (known_revenue.csv) → {id: {rev, label, url}}, в $/мес по США."""
+    p = ROOT / "known_revenue.csv"
+    if not p.exists():
+        return {}
+    lines = [s for s in p.read_text(encoding="utf-8").splitlines() if s.strip() and not s.startswith("#")]
+    out = {}
+    for r in csv.DictReader(lines):
+        try:
+            age = days_since(r["month"].strip() + "-15")
+            rev = float(r["revenue_usd_month"])
+        except (KeyError, ValueError, AttributeError):
+            continue
+        if age is None or age > CFG["known_max_age_days"] or rev <= 0:
+            continue
+        if r.get("region", "").strip().lower() != "us":
+            rev *= CFG["us_share_of_world"]
+        sure = (r.get("verified") or "").strip().lower() in ("yes", "да", "1")
+        out[r["app_id"].strip()] = {"rev": rev, "url": (r.get("source") or "").strip(),
+                                    "label": "известно, " + ("подтверждено" if sure else "со слов автора")}
+    return out
+
+
 def search_keywords(apps, hist, meta, keywords):
     if not keywords:
         return
@@ -301,7 +325,9 @@ def search_keywords(apps, hist, meta, keywords):
 
 def suggestions(term):
     txt = get(HINTS_URL, params={"clientApplication": "Software", "term": term},
-              headers={"X-Apple-Store-Front": "143441-1,29"}, as_json=False)
+              headers={"X-Apple-Store-Front": "143441-1,29"}, as_json=False, tries=1)
+    if txt is None:
+        return None  # подсказки недоступны
     if not txt:
         return []
     found = re.findall(r"<key>term</key>\s*<string>(.*?)</string>", txt, re.S)
@@ -319,7 +345,11 @@ def expand_keywords(apps, meta, base, auto):
         if len(auto) >= CFG["max_auto_keywords"] or not can_explore(apps):
             break
         seed = everything[(pos + k) % len(everything)]
-        for s in suggestions(seed):
+        found = suggestions(seed)
+        if found is None:
+            log("  Apple не отдаёт подсказки, пропускаю этот этап до завтра")
+            break
+        for s in found:
             if len(s) >= 3 and not s.isdigit() and s not in known:
                 known.add(s)
                 auto.append(s)
@@ -339,6 +369,8 @@ def explore_order(apps, res):
         if i not in apps or m["rev"] < lo:
             continue
         weight = (m["rpd"] + 0.1) * (1 if m["rev"] <= hi else 0.3) * (2 if m["cand"] else 1)
+        if m["cand"] and "mon" not in apps[i]:
+            weight *= 100  # сначала проверяем, есть ли у кандидатов платные функции
         items.append((weight, i))
     items.sort(reverse=True)
     return [i for _, i in items]
@@ -363,16 +395,16 @@ def explore_developers(apps, hist, meta, order):
 
 
 def parse_page(app_id, txt):
+    """Похожие приложения, медианная цена покупок и есть ли покупки вообще (None — не удалось понять)."""
     ids = set(re.findall(r"/app/(?:[^/\"'\s<>]+/)?id(\d{6,12})", txt))
     ids.discard(app_id)
-    text = html.unescape(re.sub(r"<[^>]+>", " ", txt))
-    k = text.lower().find("in-app purchase")
-    prices = []
-    if k >= 0:
-        seg = text[k:k + 6000]
-        prices = [float(p) for p in re.findall(r"\$\s?(\d{1,4}\.\d{2})", seg)]
+    block = re.search(r'"title":"In-App Purchases","summary":"[^"]*","items":\[(.*?)\]', txt)
+    if block:
+        prices = [float(p) for p in re.findall(r'"trailingText":"\$(\d{1,4}\.\d{2})"', block.group(1))]
         prices = [p for p in prices if 0 < p < 1000]
-    return ids, (round(statistics.median(prices), 2) if prices else None)
+        return ids, (round(statistics.median(prices), 2) if prices else None), True
+    # блок «Seller» есть на любой нормально загруженной странице; если он есть, а покупок нет — их нет
+    return ids, None, (False if '"title":"Seller"' in txt else None)
 
 
 def explore_pages(apps, hist, order):
@@ -382,16 +414,18 @@ def explore_pages(apps, hist, order):
         if done >= CFG["pages_per_day"] or not can_explore(apps):
             break
         a = apps[i]
-        if TODAY_N - a.get("pg", -9999) < CFG["revisit_days"]:
+        if TODAY_N - a.get("pg", -9999) < CFG["revisit_days"] and "mon" in a:
             continue
         txt = get(PAGE_URL.format(id=i), kind="page", as_json=False)
         a["pg"] = TODAY_N
         done += 1
         if not txt:
             continue
-        ids, iap = parse_page(i, txt)
+        ids, iap, mon = parse_page(i, txt)
         if iap:
             a["iap"] = iap
+        if mon is not None:
+            a["mon"] = mon
         pending |= {x for x in ids if x not in apps}
     log(f"  страниц открыто: {done}, найдено новых ID: {len(pending)}")
     before = len(apps)
@@ -406,6 +440,10 @@ def explore_pages(apps, hist, order):
 def growth(i, a, hist):
     """Новых оценок в день. Второе значение: True — по истории замеров, False — грубо, по возрасту."""
     h = hist.get(i) or []
+    for k in range(len(h) - 1, 0, -1):
+        if h[k][1] < h[k - 1][1]:  # разработчик сбросил оценки — считаем с момента сброса
+            h = h[k:]
+            break
     cnt = a.get("cnt", 0)
     window, min_days = CFG["growth_window_days"], CFG["growth_min_days"]
     old = [p for p in h if TODAY_N - p[0] >= min_days]
@@ -416,13 +454,29 @@ def growth(i, a, hist):
     return cnt / age, False
 
 
-def compute(apps, hist, charts):
+def accuracy(pairs):
+    """Точность оценок по парам (оценка, правда): типичная ошибка «в N раз», доля в пределах 2 раз, перекос."""
+    logs = [math.log(p / t) for p, t in pairs if p > 0 and t > 0]
+    if len(logs) < 5:
+        return None
+    return {
+        "n": len(logs),
+        "typical": round(math.exp(statistics.median(abs(x) for x in logs)), 2),
+        "within2": round(100 * sum(abs(x) <= math.log(2) for x in logs) / len(logs)),
+        "bias": round(math.exp(statistics.median(logs)), 2),
+    }
+
+
+def compute(apps, hist, charts, chist, known):
     R200, B = CFG["revenue_at_overall_rank_200"], CFG["rank_exponent"]
     gross = charts.get("grossing", {}) if charts else {}
     overall = {i: r for r, i in enumerate(gross.get("all", []), 1)}
 
     def rev_overall(rank):
         return R200 * (200 / rank) ** B
+
+    # выручка последнего места общего чарта (Apple отдаёт 100 мест)
+    last_overall = rev_overall(len(overall) or 200)
 
     # Масштаб каждого категорийного чарта: калибруем по приложениям,
     # которые есть и в категорийном, и в общем Grossing-чарте.
@@ -431,11 +485,15 @@ def compute(apps, hist, charts):
         if g == "all":
             continue
         vals = [rev_overall(overall[i]) * r ** B for r, i in enumerate(ids, 1) if i in overall]
-        # если пересечений нет — даже №1 категории зарабатывает меньше №200 общего чарта
-        scale[g] = statistics.median(vals) if vals else R200 * 0.9
+        # если пересечений нет — даже №1 категории зарабатывает меньше последнего места общего чарта
+        scale[g] = statistics.median(vals) if vals else last_overall * 0.9
         for r, i in enumerate(ids, 1):
             cat_rank.setdefault(i, []).append((g, r))
 
+    mem = CFG["chart_memory_days"]
+    for i in list(chist):
+        if i not in apps:
+            del chist[i]
     res = {}
     for i, a in apps.items():
         rpd, from_hist = growth(i, a, hist)
@@ -444,11 +502,21 @@ def compute(apps, hist, charts):
             chart_rev, rank = rev_overall(overall[i]), f"#{overall[i]} общий"
         elif i in cat_rank:
             ests = [scale[g] * r ** -B for g, r in cat_rank[i]]
-            chart_rev = min(statistics.median(ests), R200 * 0.98)
+            chart_rev = min(statistics.median(ests), last_overall * 0.98)
             g, r = min(cat_rank[i], key=lambda x: x[1])
             name = APP_GENRES.get(int(g)) or GAME_GENRES.get(int(g), g)
             rank = f"#{r} {name}"
-        res[i] = {"rpd": rpd, "hist": from_hist, "chart": chart_rev, "rank": rank}
+        # Память чартов: выручка по чарту за последние дни (сглаживает скачки места в чарте)
+        h = [p for p in chist.get(i, []) if p[0] != TODAY_N and TODAY_N - p[0] <= mem]
+        if chart_rev:
+            h.append([TODAY_N, round(chart_rev)])
+            chart_rev = statistics.median(p[1] for p in h if TODAY_N - p[0] < CFG["growth_window_days"])
+        if h:
+            chist[i] = h
+        else:
+            chist.pop(i, None)
+        res[i] = {"rpd": rpd, "hist": from_hist, "chart": chart_rev, "rank": rank,
+                  "last_chart": max(p[0] for p in h) if h else None}
 
     # Уровень цен: медианная цена встроенных покупок (если удалось прочитать) или цена приложения.
     def level(a):
@@ -470,43 +538,75 @@ def compute(apps, hist, charts):
         m = res[i]
         if m["chart"] and m["rpd"] > 0:
             k = m["chart"] / (m["rpd"] * 30 * price_factor(a))
-            samples.setdefault(a.get("cid"), []).append((k, m["hist"]))
+            samples.setdefault(a.get("cid"), []).append((k, m["hist"], i))
 
     def usable(lst):
-        good = [k for k, h in lst if h]
-        return good if len(good) >= 3 else [k for k, _ in lst]
+        good = [k for k, h, _ in lst if h]
+        return good if len(good) >= 3 else [k for k, _, _ in lst]
 
     all_k = usable([s for lst in samples.values() for s in lst])
     global_k = statistics.median(all_k) if all_k else CFG["default_revenue_per_new_rating"]
-    k_cat, calib = {}, []
-    for c, lst in samples.items():
-        ks = usable(lst)
-        if len(ks) >= 5:
-            k = statistics.median(ks)
-        else:
-            k = math.sqrt(statistics.median(ks) * global_k)
-        k_cat[c] = min(3000.0, max(3.0, k))
-        calib.append([APP_GENRES.get(c, str(c)), round(k_cat[c], 1), len(ks)])
-    calib.sort(key=lambda x: -x[2])
 
-    # Потолок для тех, кого нет в чарте: меньше, чем у №200 своей категории (если чарт полный).
-    cap_cat = {g: scale[g] * 200 ** -B for g, ids in gross.items() if g != "all" and len(ids) >= 200}
+    def k_for(c, skip=None):
+        ks = usable([s for s in samples.get(c, []) if s[2] != skip])
+        if not ks:
+            return global_k
+        k = statistics.median(ks) if len(ks) >= 5 else math.sqrt(statistics.median(ks) * global_k)
+        return min(3000.0, max(3.0, k))
+
+    k_cat = {c: k_for(c) for c in samples}
+    calib = sorted(([APP_GENRES.get(c, str(c)), round(k_cat[c], 1), len(usable(samples[c]))] for c in samples),
+                   key=lambda x: -x[2])
+
+    dpr = CFG["downloads_per_rating"]
+
+    def model_rev(i, a, k):
+        rev = res[i]["rpd"] * 30 * k * price_factor(a)
+        if a.get("price", 0) > 0:
+            rev = max(rev, res[i]["rpd"] * dpr * 30 * a["price"])
+        return rev
+
+    # Самопроверка 1: приложения из нижней половины чартов категорий оцениваем по оценкам,
+    # как будто их нет в чарте (без них самих в калибровке), и сравниваем с выручкой по чарту.
+    check_chart = accuracy([
+        (model_rev(i, apps[i], k_for(apps[i].get("cid"), skip=i)), m["chart"])
+        for i, m in res.items()
+        if m["chart"] and m["rpd"] > 0 and i not in overall and i in cat_rank
+        and min(r for _, r in cat_rank[i]) > 50
+    ])
+
+    # Реальная выручка из открытых источников: поправка модели для приложений вне чартов
+    # и самопроверка 2 (каждое приложение проверяем по поправке, посчитанной без него).
+    kn = {i: model_rev(i, apps[i], k_cat.get(apps[i].get("cid"), global_k))
+          for i in known if i in apps and res[i]["rpd"] > 0}
+
+    def correction(skip=None):
+        logs = [math.log(known[i]["rev"] / v) for i, v in kn.items() if i != skip and v > 0]
+        return min(5.0, max(0.2, math.exp(statistics.median(logs)))) if len(logs) >= 5 else 1.0
+
+    corr = correction()
+    check_known = accuracy([(v * correction(skip=i), known[i]["rev"]) for i, v in kn.items()])
+
+    # Потолок для тех, кого нет в чарте: меньше, чем у последнего места своей категории.
+    cap_cat = {g: scale[g] * len(ids) ** -B for g, ids in gross.items() if g != "all" and len(ids) >= 90}
 
     cc = CFG["candidates"]
-    dpr = CFG["downloads_per_rating"]
     for i, a in apps.items():
         m = res[i]
-        if m["chart"]:
-            rev = m["chart"]
+        if i in known:
+            rev, m["src"] = known[i]["rev"], "known"
+            m["rank"], m["url"] = known[i]["label"], known[i]["url"]
+        elif m["chart"]:
+            rev, m["src"] = m["chart"], "chart"
         else:
-            rev = m["rpd"] * 30 * k_cat.get(a.get("cid"), global_k) * price_factor(a)
-            if a.get("price", 0) > 0:
-                rev = max(rev, m["rpd"] * dpr * 30 * a["price"])
-            caps = [R200 * 0.98]
-            for g in [str(a.get("cid"))] + [g for g in a.get("gids", []) if g.startswith("7")]:
-                if g in cap_cat:
-                    caps.append(cap_cat[g])
-            rev = min(rev, min(caps))
+            rev, m["src"] = model_rev(i, a, k_cat.get(a.get("cid"), global_k)) * corr, "model"
+            caps = [cap_cat[g] for g in [str(a.get("cid"))] + [g for g in a.get("gids", []) if g.startswith("7")]
+                    if g in cap_cat]
+            rev = min([rev, last_overall * 0.98] + caps)
+            if m["last_chart"] is not None and caps:
+                # недавно был в чарте — значит, зарабатывает около его последнего места
+                rev = max(rev, 0.5 * min(caps))
+                m["src"], m["rank"] = "recent", f"был в чарте {TODAY_N - m['last_chart']} дн. назад"
         m["rev"] = rev
         age = days_since(a.get("rel"))
         m["mom"] = m["rpd"] * 30 / max(a.get("cnt", 0), 1)
@@ -516,8 +616,11 @@ def compute(apps, hist, charts):
             and m["rpd"] >= cc["min_ratings_per_day"]
             and a.get("cnt", 0) <= cc["max_total_ratings"]
             and (CFG["include_games"] or a.get("cid") != 6014)
+            and (a.get("mon") is not False or a.get("price", 0) > 0)  # бесплатное без покупок — не кандидат
         )
-    return res, {"global_k": round(global_k, 1), "calib": calib, "chart_ok": bool(overall)}
+    return res, {"global_k": round(global_k, 1), "calib": calib, "chart_ok": bool(overall),
+                 "check_chart": check_chart, "check_known": check_known,
+                 "corr": round(corr, 2), "known_n": len(kn)}
 
 
 # ---------------------------------------------------------------------------
@@ -534,7 +637,7 @@ def prune(apps, hist, res):
         def keep(i):
             m = res.get(i, {})
             fresh = TODAY_N - apps[i].get("first", TODAY_N) < 14
-            return (1 if m.get("chart") else 0, 1 if fresh else 0, m.get("rev", 0))
+            return (1 if m.get("src") in ("chart", "known", "recent") else 0, 1 if fresh else 0, m.get("rev", 0))
         for i in sorted(apps, key=keep)[:extra]:
             apps.pop(i, None)
             hist.pop(i, None)
@@ -548,13 +651,14 @@ def export(apps, res, info, meta, n_keywords, n_auto):
         m = res.get(i)
         if not m:
             continue
-        if not (m["chart"] or m["cand"] or m["rev"] >= CFG["export_min_revenue"]):
+        if not (m["chart"] or m["cand"] or m["src"] == "known" or m["rev"] >= CFG["export_min_revenue"]):
             continue
         rows.append([
             int(i), a.get("n", ""), a.get("dev", ""), a.get("cat", ""), a.get("price", 0),
             a.get("cnt", 0), a.get("rat", 0), round(m["rpd"], 2), 1 if m["hist"] else 0,
             round(m["rev"]), 1 if m["chart"] else 0, m["rank"], a.get("rel", ""), a.get("upd", ""),
             round(m["mom"], 4), 1 if m["cand"] else 0, a.get("iap"), round(m["rpd"] * dpr),
+            {True: 1, False: 0}.get(a.get("mon")), m["src"], m.get("url"),
         ])
     rows.sort(key=lambda r: -r[9])
     rows = rows[: CFG["export_max_rows"]]
@@ -569,6 +673,10 @@ def export(apps, res, info, meta, n_keywords, n_auto):
         "chart_ok": info.get("chart_ok"),
         "global_k": info.get("global_k"),
         "calib": info.get("calib", []),
+        "check_chart": info.get("check_chart"),
+        "check_known": info.get("check_known"),
+        "corr": info.get("corr"),
+        "known_n": info.get("known_n"),
         "target": [CFG["candidates"]["min_revenue"], CFG["candidates"]["max_revenue"]],
         "rows": rows,
     }
@@ -589,17 +697,21 @@ def main():
     meta = load("meta.json", {})
     auto = load("keywords_auto.json", [])
     meta.setdefault("first_day", TODAY_N)
+    chist = load("chart_history.json", {})
     base = read_keywords()
-    log(f"В базе {len(apps)} приложений, запросов: {len(base)} своих + {len(auto)} авто")
+    known = read_known()
+    log(f"В базе {len(apps)} приложений, запросов: {len(base)} своих + {len(auto)} авто, "
+        f"с известной выручкой: {len(known)}")
 
     charts = phase("Чарты США", collect_charts, apps, hist) or {}
     save("charts.json", charts)
+    phase("Приложения с известной выручкой", lookup, list(known), apps, hist, "known", frozenset(known))
 
     phase("Поиск по ключевым словам", search_keywords, apps, hist, meta,
           list(dict.fromkeys(base + auto)))
     phase("Автоподсказки App Store", expand_keywords, apps, meta, base, auto)
 
-    computed = phase("Предварительный расчёт", compute, apps, hist, charts)
+    computed = phase("Предварительный расчёт", compute, apps, hist, charts, chist, known)
     if computed:
         order = explore_order(apps, computed[0])
         phase("Другие приложения разработчиков", explore_developers, apps, hist, meta, order)
@@ -611,7 +723,7 @@ def main():
         lookup(todo, apps, hist, "refresh", keep_minutes=1.5)
     phase("Ежедневный замер всей базы", refresh)
 
-    final = phase("Итоговый расчёт", compute, apps, hist, charts)
+    final = phase("Итоговый расчёт", compute, apps, hist, charts, chist, known)
     if final:
         res, info = final
         phase("Чистка базы", prune, apps, hist, res)
@@ -621,6 +733,7 @@ def main():
     save("history.json", hist)
     save("meta.json", meta)
     save("keywords_auto.json", auto)
+    save("chart_history.json", chist)
     log("Готово.")
 
 

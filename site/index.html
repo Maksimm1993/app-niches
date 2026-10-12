@@ -100,7 +100,7 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
 <body>
 <div class="wrap">
   <header>
-    <h1>Ниши App Store<small>США · приложения с выручкой ниже топ-200</small></h1>
+    <h1>Ниши App Store<small>США · приложения с выручкой ниже топ-100</small></h1>
     <p id="status">Загружаю данные…</p>
   </header>
 
@@ -118,7 +118,7 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
     <label>Оценок всего<span class="pair"><input id="f-cmin" type="number" min="0" placeholder="от"><input id="f-cmax" type="number" min="0" placeholder="до"></span></label>
     <label>Цена<select id="f-price"><option value="">Любая</option><option value="free">Бесплатные</option><option value="paid">Платные</option></select></label>
     <label>Релиз не раньше<input id="f-rel" type="date"></label>
-    <label>Источник выручки<select id="f-src"><option value="">Любой</option><option value="model">Только модель (вне чартов)</option><option value="chart">Только по чарту</option></select></label>
+    <label>Источник выручки<select id="f-src"><option value="">Любой</option><option value="model">По модели (вне чартов)</option><option value="chart">По чарту</option><option value="recent">Недавно был в чарте</option><option value="known">Известна из открытых источников</option></select></label>
     <div class="actions"><button class="btn" id="b-reset">Сбросить</button><button class="btn" id="b-csv">Скачать CSV</button></div>
   </div>
 
@@ -136,9 +136,11 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
     <ul>
       <li><b>Оценок в день</b> — сколько новых оценок приложение набирает в среднем за последние ~14 дней. Это главный сигнал: оценки растут вместе со скачиваниями. Значок ≈ значит, что истории замеров ещё мало и число посчитано грубо (все оценки ÷ возраст приложения).</li>
       <li><b>Скачиваний в день</b> — оценки × коэффициент из настроек (по умолчанию 60). Очень приблизительно.</li>
-      <li><b>Выручка</b> — для приложений из Grossing-чартов считается по месту в чарте («по чарту»). Для остальных — по модели: новые оценки × «$ на одну оценку» в этой категории × поправка на цену покупок. «$ на оценку» калибруется каждый день на приложениях из чартов. Шкала справа — от $100 до $10 млн в месяц, зелёная зона — ваш целевой диапазон.</li>
+      <li><b>Выручка</b> — для приложений из Grossing-чартов считается по месту в чарте («по чарту»). Для остальных — по модели: новые оценки × «$ на одну оценку» в этой категории × поправка на цену покупок × поправка по приложениям с известной выручкой. «$ на оценку» калибруется каждый день на приложениях из чартов. Выручка вне чарта не может быть выше последнего места чарта своей категории. Шкала справа — от $100 до $10 млн в месяц, зелёная зона — ваш целевой диапазон.</li>
       <li><b>Рост за месяц</b> — сколько процентов от всех своих оценок приложение набирает за месяц. Высокий процент при небольшом числе оценок — признак быстро растущего новичка.</li>
-      <li><b>Покупки ≈</b> — медианная цена встроенных покупок со страницы App Store (есть не у всех).</li>
+      <li><b>Покупки</b> — медианная цена встроенных покупок со страницы App Store. «нет» — платных функций нет, такое бесплатное приложение не попадает в кандидаты. «—» — страницу ещё не проверяли.</li>
+      <li><b>Источник выручки:</b> «по чарту» — по месту в Grossing-чарте (среднее за последние дни); «недавно в чарте» — приложение выпало из чарта за последний месяц, выручка не ниже половины последнего места; «известно» — цифра из открытых источников (файл known_revenue.csv); «по модели» — по приросту оценок.</li>
+      <li><b>Точность</b> — инструмент сам проверяет себя каждый день. «Типичная ошибка в 2 раза» значит: у половины приложений оценка отличается от правды не больше чем в 2 раза. Проверка 1 — на приложениях из нижней половины чартов категорий (их выручка известна по чарту). Проверка 2 — на приложениях с известной выручкой; она ближе всего к вашим кандидатам.</li>
     </ul>
     <p>Калибровка «$ выручки на одну новую оценку» по категориям:</p>
     <table><thead><tr><th class="l">Категория</th><th>$ на оценку</th><th>приложений в выборке</th></tr></thead><tbody id="calib"></tbody></table>
@@ -150,7 +152,7 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
 (function(){
   "use strict";
   // порядок полей в строке данных (как в collector.py → export)
-  const F={id:0,name:1,dev:2,cat:3,price:4,cnt:5,rat:6,rpd:7,hist:8,rev:9,chart:10,rank:11,rel:12,upd:13,mom:14,cand:15,iap:16,dl:17};
+  const F={id:0,name:1,dev:2,cat:3,price:4,cnt:5,rat:6,rpd:7,hist:8,rev:9,chart:10,rank:11,rel:12,upd:13,mom:14,cand:15,iap:16,dl:17,mon:18,src:19,url:20};
   const D=window.APP_DATA||{rows:[]};
   const rows=D.rows||[];
   const TARGET=D.target||[5000,50000];
@@ -167,7 +169,7 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
     {k:"mom",t:"Рост за месяц"},
     {k:"rat",t:"Рейтинг"},
     {k:"price",t:"Цена"},
-    {k:"iap",t:"Покупки ≈"},
+    {k:"iap",t:"Покупки"},
     {k:"rel",t:"Релиз"},
   ];
 
@@ -189,13 +191,19 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
   const fmtDate=s=>s?s.split("-").reverse().join("."):"—";
 
   // статус
+  function accLine(t,c){
+    if(!c) return "";
+    return "<br>"+t+": типичная ошибка <b>в "+String(c.typical).replace(".",",")+" раза</b>, в пределах 2 раз — "+c.within2+"% (проверено "+num(c.n)+" прил.)";
+  }
   if(rows.length){
     const d=new Date(D.updated+"T00:00:00");
     $("status").innerHTML="Обновлено <b>"+d.toLocaleDateString("ru-RU",{day:"numeric",month:"long",year:"numeric"})+
       "</b>. Отслеживается <b>"+num(D.tracked)+"</b> приложений, поисковых запросов: "+num(D.keywords)+
       ". История замеров: "+D.history_days+" дн."+
       (D.history_days<7?" Первую неделю прирост оценок считается грубо — точные цифры появятся через 7–14 дней.":"")+
-      (D.chart_ok===false?" Grossing-чарт сегодня не загрузился, выручка посчитана по запасной формуле.":"");
+      (D.chart_ok===false?" Grossing-чарт сегодня не загрузился, выручка посчитана по запасной формуле.":"")+
+      accLine("Точность по чартам",D.check_chart)+accLine("Точность по известной выручке",D.check_known)+
+      (D.known_n?" Поправка модели по известной выручке: ×"+D.corr+".":"");
   } else {
     $("status").textContent="Данных пока нет.";
   }
@@ -230,8 +238,7 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
       if(cat && r[F.cat]!==cat) return false;
       if(price==="free" && r[F.price]>0) return false;
       if(price==="paid" && !(r[F.price]>0)) return false;
-      if(src==="model" && r[F.chart]) return false;
-      if(src==="chart" && !r[F.chart]) return false;
+      if(src && r[F.src]!==src) return false;
       if(rel && (r[F.rel]||"")<rel) return false;
       if(rmin!=null && r[F.rev]<rmin) return false;
       if(rmax!=null && r[F.rev]>rmax) return false;
@@ -255,7 +262,9 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
   function rowHtml(r){
     const url="https://apps.apple.com/us/app/id"+r[F.id];
     const v=r[F.rev], inZone=v>=TARGET[0]&&v<=TARGET[1];
-    const src=r[F.chart]?"<small class='chart'>по чарту "+esc(r[F.rank])+"</small>":"<small>по модели</small>";
+    const src={chart:"<small class='chart'>по чарту "+esc(r[F.rank])+"</small>",
+      known:"<small class='chart'>"+esc(r[F.rank])+(r[F.url]?" · <a href='"+esc(r[F.url])+"' target='_blank' rel='noopener'>источник</a>":"")+"</small>",
+      recent:"<small>"+esc(r[F.rank])+"</small>"}[r[F.src]]||"<small>по модели</small>";
     const approx=r[F.hist]?"":"<span class='approx' title='Мало истории замеров: посчитано грубо, по возрасту приложения'>≈ </span>";
     const mom=r[F.mom]*100;
     return "<tr>"+
@@ -268,7 +277,7 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
       "<td>"+(mom>=10?"<span class='hot'>":"<span>")+mom.toLocaleString("ru-RU",{maximumFractionDigits:mom<10?1:0})+"%</span></td>"+
       "<td>"+(r[F.rat]?r[F.rat].toFixed(1):"—")+"</td>"+
       "<td>"+(r[F.price]>0?"$"+r[F.price].toFixed(2):"<span class='dim'>бесплатно</span>")+"</td>"+
-      "<td class='dim'>"+(r[F.iap]?"$"+r[F.iap].toFixed(2):"—")+"</td>"+
+      "<td class='dim'>"+(r[F.iap]?"$"+r[F.iap].toFixed(2):r[F.mon]===0?"нет":r[F.mon]===1?"есть":"—")+"</td>"+
       "<td>"+fmtDate(r[F.rel])+"</td>"+
     "</tr>";
   }
@@ -313,9 +322,9 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
   $("b-next").onclick=()=>{state.page++; update(); window.scrollTo({top:0});};
 
   $("b-csv").onclick=()=>{
-    const head=["id","name","developer","category","revenue_usd_month","revenue_source","chart_rank","ratings_per_day","downloads_per_day","ratings_total","growth_month_pct","rating","price","iap_median","release","last_update","candidate","url"];
+    const head=["id","name","developer","category","revenue_usd_month","revenue_source","chart_rank","ratings_per_day","downloads_per_day","ratings_total","growth_month_pct","rating","price","iap_median","has_purchases","release","last_update","candidate","url"];
     const q=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
-    const lines=view.map(r=>[r[F.id],q(r[F.name]),q(r[F.dev]),q(r[F.cat]),r[F.rev],r[F.chart]?"chart":"model",q(r[F.rank]),r[F.rpd],r[F.dl],r[F.cnt],(r[F.mom]*100).toFixed(1),r[F.rat],r[F.price],r[F.iap]??"",r[F.rel],r[F.upd],r[F.cand],"https://apps.apple.com/us/app/id"+r[F.id]].join(","));
+    const lines=view.map(r=>[r[F.id],q(r[F.name]),q(r[F.dev]),q(r[F.cat]),r[F.rev],r[F.src]||"",q(r[F.rank]),r[F.rpd],r[F.dl],r[F.cnt],(r[F.mom]*100).toFixed(1),r[F.rat],r[F.price],r[F.iap]??"",r[F.mon]??"",r[F.rel],r[F.upd],r[F.cand],"https://apps.apple.com/us/app/id"+r[F.id]].join(","));
     const blob=new Blob(["\ufeff"+head.join(",")+"\n"+lines.join("\n")],{type:"text/csv;charset=utf-8"});
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="app-niches-"+(D.updated||"data")+".csv";
     document.body.appendChild(a); a.click(); a.remove();

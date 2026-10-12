@@ -1,0 +1,35 @@
+# Реальная выручка приложений из открытых источников. По этим цифрам инструмент
+# проверяет свою точность и подправляет оценки для приложений вне чартов.
+#
+# Колонки:
+#   app_id            — номер приложения в App Store (из ссылки apps.apple.com/.../id123456)
+#   name              — название (для удобства, программа его не читает)
+#   revenue_usd_month — выручка в месяц в долларах, до комиссии Apple
+#   region            — us = только США, world = весь мир (тогда берётся доля США из config.yaml)
+#   month             — за какой месяц цифра (ГГГГ-ММ); строки старше known_max_age_days не используются
+#   verified          — yes = подтверждено платёжной системой, no = со слов автора
+#   source            — ссылка на источник
+#
+# Источник строк ниже: TrustMRR, выручка за 30 дней по 12.10.2026, подтверждена через RevenueCat/Superwall.
+# Отбор: приложение есть в App Store США, там не меньше 100 оценок, выручка от $1000.
+# Цифры — по всему миру и по всем платформам (если есть версия для Android, она тоже входит).
+app_id,name,revenue_usd_month,region,month,verified,source
+6756290066,3AK Sprinting,30883,world,2026-09,yes,https://trustmrr.com/startup/3ak-track-field
+6757769125,AbMaxx,48297,world,2026-09,yes,https://trustmrr.com/startup/abmaxx
+6759840821,Boxer AI,7312,world,2026-09,yes,https://trustmrr.com/startup/boxer-ai
+6760366949,BRAWLER,61151,world,2026-09,yes,https://trustmrr.com/startup/brawler
+6757117065,Dailyglowup,16114,world,2026-09,yes,https://trustmrr.com/startup/dailyglowup
+6741483227,Goodie AI,7864,world,2026-09,yes,https://trustmrr.com/startup/goodie-ai
+1548649551,Itemlist,1028,world,2026-09,yes,https://trustmrr.com/startup/itemlist
+6748324995,Calyra,85212,world,2026-09,yes,https://trustmrr.com/startup/nutria-9e3eaa
+6740924171,Pattrn,7517,world,2026-09,yes,https://trustmrr.com/startup/pattrn
+6746055015,No Contact,3247,world,2026-09,yes,https://trustmrr.com/startup/private-enterprise-6
+6645884227,PropGPT,87784,world,2026-09,yes,https://trustmrr.com/startup/propgpt-ai-props-analysis
+6749167909,Swish AI,5149,world,2026-09,yes,https://trustmrr.com/startup/swish-ai
+6760734657,Verbi,66393,world,2026-09,yes,https://trustmrr.com/startup/verbi
+6756392359,FaceKit,25884,world,2026-09,yes,https://trustmrr.com/startup/facekit
+6747467975,GoTall,31747,world,2026-09,yes,https://trustmrr.com/startup/gotall
+6739485719,FlareCare,7291,world,2026-09,yes,https://trustmrr.com/startup/flarecare
+6751680266,UCHAD,58516,world,2026-09,yes,https://trustmrr.com/startup/uchadai
+1617533959,Bamboo VPN,7446,world,2026-09,yes,https://trustmrr.com/startup/bamboovpn
+6757513095,PeptIQ,22415,world,2026-09,yes,https://trustmrr.com/startup/peptiq
