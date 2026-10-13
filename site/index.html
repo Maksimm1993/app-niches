@@ -83,6 +83,9 @@ td.cat{color:var(--muted);font-size:13px;white-space:nowrap}
 .scale .tick.in{background:var(--money)}
 .hot{color:var(--heat);font-weight:600}
 .badge{display:inline-block;font-size:12px;font-weight:600;color:var(--heat);background:var(--heatbg);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+.badge.money{color:var(--money);background:color-mix(in srgb,var(--band) 45%,transparent)}
+.badge.soft{color:var(--muted);background:var(--bg);font-weight:500}
+.hide{display:none!important}
 
 .pager{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px;color:var(--muted);font-size:14px}
 .empty{padding:40px 20px;text-align:left;color:var(--muted)}
@@ -105,20 +108,23 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
   </header>
 
   <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-niche" aria-selected="false">Ниши<span class="n" id="n-niche"></span></button>
     <button class="tab" role="tab" id="tab-cand" aria-selected="true">Кандидаты<span class="n" id="n-cand"></span></button>
     <button class="tab" role="tab" id="tab-all" aria-selected="false">Все приложения<span class="n" id="n-all"></span></button>
   </div>
   <p class="tabnote" id="tabnote"></p>
 
   <div class="filters">
-    <label class="wide">Название или разработчик<input id="f-q" type="search" placeholder="например, scanner"></label>
+    <label class="wide"><span id="q-label">Название или разработчик</span><input id="f-q" type="search" placeholder="например, scanner"></label>
     <label>Категория<select id="f-cat"><option value="">Все</option></select></label>
-    <label>Выручка, $/мес<span class="pair"><input id="f-rmin" type="number" min="0" placeholder="от"><input id="f-rmax" type="number" min="0" placeholder="до"></span></label>
-    <label>Оценок в день, от<input id="f-rpd" type="number" min="0" step="0.5"></label>
-    <label>Оценок всего<span class="pair"><input id="f-cmin" type="number" min="0" placeholder="от"><input id="f-cmax" type="number" min="0" placeholder="до"></span></label>
-    <label>Цена<select id="f-price"><option value="">Любая</option><option value="free">Бесплатные</option><option value="paid">Платные</option></select></label>
-    <label>Релиз не раньше<input id="f-rel" type="date"></label>
-    <label>Источник выручки<select id="f-src"><option value="">Любой</option><option value="model">По модели (вне чартов)</option><option value="chart">По чарту</option><option value="recent">Недавно был в чарте</option><option value="known">Известна из открытых источников</option></select></label>
+    <label class="apponly">Крупные разработчики<select id="f-studio"><option value="">Показывать</option><option value="hide">Скрыть</option><option value="only">Только они</option></select></label>
+    <label class="apponly">Много денег на скачивание<select id="f-eff"><option value="">Все приложения</option><option value="only">Только такие</option></select></label>
+    <label class="apponly">Выручка, $/мес<span class="pair"><input id="f-rmin" type="number" min="0" placeholder="от"><input id="f-rmax" type="number" min="0" placeholder="до"></span></label>
+    <label class="apponly">Оценок в день, от<input id="f-rpd" type="number" min="0" step="0.5"></label>
+    <label class="apponly">Оценок всего<span class="pair"><input id="f-cmin" type="number" min="0" placeholder="от"><input id="f-cmax" type="number" min="0" placeholder="до"></span></label>
+    <label class="apponly">Цена<select id="f-price"><option value="">Любая</option><option value="free">Бесплатные</option><option value="paid">Платные</option></select></label>
+    <label class="apponly">Релиз не раньше<input id="f-rel" type="date"></label>
+    <label class="apponly">Источник выручки<select id="f-src"><option value="">Любой</option><option value="model">По модели (вне чартов)</option><option value="chart">По чарту</option><option value="recent">Недавно был в чарте</option><option value="known">Известна из открытых источников</option></select></label>
     <div class="actions"><button class="btn" id="b-reset">Сбросить</button><button class="btn" id="b-csv">Скачать CSV</button></div>
   </div>
 
@@ -134,6 +140,10 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
   <details class="help">
     <summary>Как читать цифры</summary>
     <ul>
+      <li><b>Ниши</b> — по каждому поисковому запросу смотрятся первые 10 мест выдачи App Store. «Новички с выручкой» — сколько приложений не старше года уже зарабатывают от нижней границы целевого диапазона: значит, в нишу реально пробиться. «Слабых мест» — сколько из 10 мест занято приложениями с выручкой меньше $1000 (или пустует): туда легче встать. «Студий» — сколько мест у крупных разработчиков. «Топ-3 без обновлений» — сколько лидеров не обновлялись больше года. Полный круг по всем запросам занимает около двух недель; выручка внутри ниши — те же ориентировочные оценки.</li>
+      <li><b>Много $ на скачивание</b> — приложение есть в Grossing-чарте (или его выручка известна), а оценок набирает мало: зарабатывает минимум в 3 раза больше обычного для своей категории при таком же числе скачиваний. Причина может быть любой — цена, хорошая конверсия, удачный пейвол. Такие приложения попадают в кандидаты даже при малом приросте оценок.</li>
+      <li><b>Студия</b> — у разработчика 10+ приложений в базе или общая выручка от $300 тыс в месяц. Повторить их успех в одиночку сложно, но их присутствие показывает, что в нише есть деньги.</li>
+      <li><b>Тяжёлые игры</b> (Action, Strategy, RPG, Racing, Casino, Simulation) в кандидаты не попадают, но видны во «Всех приложениях» (категория «Игры: тяжёлые»).</li>
       <li><b>Оценок в день</b> — сколько новых оценок приложение набирает в среднем за последние ~14 дней. Это главный сигнал: оценки растут вместе со скачиваниями. Значок ≈ значит, что истории замеров ещё мало и число посчитано грубо (все оценки ÷ возраст приложения).</li>
       <li><b>Скачиваний в день</b> — оценки × коэффициент из настроек (по умолчанию 60). Очень приблизительно.</li>
       <li><b>Выручка</b> — для приложений из Grossing-чартов считается по месту в чарте («по чарту»). Для остальных — по модели: новые оценки × «$ на одну оценку» в этой категории × поправка на цену покупок × поправка по приложениям с известной выручкой. «$ на оценку» калибруется каждый день на приложениях из чартов. Выручка вне чарта не может быть выше последнего места чарта своей категории. Шкала справа — от $100 до $10 млн в месяц, зелёная зона — ваш целевой диапазон.</li>
@@ -152,10 +162,14 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
 (function(){
   "use strict";
   // порядок полей в строке данных (как в collector.py → export)
-  const F={id:0,name:1,dev:2,cat:3,price:4,cnt:5,rat:6,rpd:7,hist:8,rev:9,chart:10,rank:11,rel:12,upd:13,mom:14,cand:15,iap:16,dl:17,mon:18,src:19,url:20};
+  const F={id:0,name:1,dev:2,cat:3,price:4,cnt:5,rat:6,rpd:7,hist:8,rev:9,chart:10,rank:11,rel:12,upd:13,mom:14,cand:15,iap:16,dl:17,mon:18,src:19,url:20,grp:21,studio:22,eff:23};
+  // поля ниши (как в collector.py → niches)
+  const NF={kw:0,grp:1,tot:2,earn:3,newe:4,weak:5,stud:6,lrat:7,stale:8,bid:9,bname:10,brev:11};
   const D=window.APP_DATA||{rows:[]};
   const rows=D.rows||[];
+  const niches=D.niches||[];
   const TARGET=D.target||[5000,50000];
+  const TOP=D.niche_top||10;
   const PAGE=100;
   const $=id=>document.getElementById(id);
 
@@ -172,8 +186,21 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
     {k:"iap",t:"Покупки"},
     {k:"rel",t:"Релиз"},
   ];
+  const NCOLS=[
+    {k:"kw",t:"Поисковый запрос",cls:"l"},
+    {k:"grp",t:"Категория",cls:"l"},
+    {k:"newe",t:"Новички с выручкой"},
+    {k:"weak",t:"Слабых мест из "+TOP},
+    {k:"earn",t:"Зарабатывают от $"+Math.round(TARGET[0]/1000)+" тыс"},
+    {k:"tot",t:"Выручка топ-"+TOP+", $/мес"},
+    {k:"stud",t:"Студий"},
+    {k:"lrat",t:"Рейтинг топ-3"},
+    {k:"stale",t:"Топ-3 без обновлений год+"},
+    {k:"brev",t:"Лучший новичок",cls:"l"},
+  ];
 
   const state={tab:"cand",sort:"rev",dir:-1,page:0};
+  const isN=()=>state.tab==="niche";
   let view=[];
 
   const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -209,9 +236,10 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
   }
   $("n-cand").textContent=num(D.candidates||0);
   $("n-all").textContent=num(rows.length);
+  $("n-niche").textContent=num(niches.length);
 
   // категории
-  [...new Set(rows.map(r=>r[F.cat]))].filter(Boolean).sort().forEach(c=>{
+  (D.groups||[]).forEach(c=>{
     const o=document.createElement("option"); o.value=c; o.textContent=c; $("f-cat").appendChild(o);
   });
   // калибровка
@@ -219,23 +247,30 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
     (D.global_k?"<tr><td class='l'><b>Все категории</b></td><td>$"+D.global_k+"</td><td></td></tr>":"");
 
   // заголовки
-  $("head").innerHTML=COLS.map(c=>"<th class='"+(c.cls||"")+"' data-k='"+c.k+"' tabindex='0'>"+c.t+"</th>").join("");
-  $("head").querySelectorAll("th").forEach(th=>{
-    const go=()=>{const k=th.dataset.k; if(state.sort===k) state.dir*=-1; else {state.sort=k; state.dir=(k==="name"||k==="cat")?1:-1;} state.page=0; update();};
-    th.addEventListener("click",go);
-    th.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});
-  });
+  function renderHead(){
+    $("head").innerHTML=(isN()?NCOLS:COLS).map(c=>"<th class='"+(c.cls||"")+"' data-k='"+c.k+"' tabindex='0'>"+c.t+"</th>").join("");
+    $("head").querySelectorAll("th").forEach(th=>{
+      const go=()=>{const k=th.dataset.k; if(state.sort===k) state.dir*=-1; else {state.sort=k; state.dir=(k==="name"||k==="cat"||k==="kw"||k==="grp")?1:-1;} state.page=0; update();};
+      th.addEventListener("click",go);
+      th.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});
+    });
+  }
 
   const val=id=>$(id).value.trim();
   const nOrNull=id=>val(id)===""?null:Number(val(id));
 
   function filtered(){
     const q=val("f-q").toLowerCase(), cat=val("f-cat"), price=val("f-price"), src=val("f-src"), rel=val("f-rel");
+    const studio=val("f-studio"), eff=val("f-eff");
     const rmin=nOrNull("f-rmin"), rmax=nOrNull("f-rmax"), rpd=nOrNull("f-rpd"), cmin=nOrNull("f-cmin"), cmax=nOrNull("f-cmax");
+    if(isN()) return niches.filter(n=>(!q||n[NF.kw].includes(q))&&(!cat||n[NF.grp]===cat));
     return rows.filter(r=>{
       if(state.tab==="cand" && !r[F.cand]) return false;
       if(q && !(r[F.name].toLowerCase().includes(q)||r[F.dev].toLowerCase().includes(q))) return false;
-      if(cat && r[F.cat]!==cat) return false;
+      if(cat && r[F.grp]!==cat) return false;
+      if(studio==="hide" && r[F.studio]) return false;
+      if(studio==="only" && !r[F.studio]) return false;
+      if(eff && !r[F.eff]) return false;
       if(price==="free" && r[F.price]>0) return false;
       if(price==="paid" && !(r[F.price]>0)) return false;
       if(src && r[F.src]!==src) return false;
@@ -250,7 +285,7 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
   }
 
   function sortRows(list){
-    const i=F[state.sort], d=state.dir;
+    const i=(isN()?NF:F)[state.sort], d=state.dir;
     return list.sort((a,b)=>{
       let x=a[i], y=b[i];
       if(x==null||x==="") return 1; if(y==null||y==="") return -1;
@@ -269,7 +304,9 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
     const mom=r[F.mom]*100;
     return "<tr>"+
       "<td class='app'><a href='"+url+"' target='_blank' rel='noopener'>"+esc(r[F.name])+"</a><span>"+esc(r[F.dev])+"</span></td>"+
-      "<td class='cat l'>"+esc(r[F.cat])+(r[F.cand]&&state.tab==="all"?"<span class='badge'>кандидат</span>":"")+"</td>"+
+      "<td class='cat l'>"+esc(r[F.cat])+(r[F.cand]&&state.tab==="all"?"<span class='badge'>кандидат</span>":"")+
+        (r[F.eff]?"<span class='badge money' title='Зарабатывает намного больше обычного при таком числе скачиваний'>много $ на скачивание</span>":"")+
+        (r[F.studio]?"<span class='badge soft' title='У разработчика много приложений или большая общая выручка'>студия</span>":"")+"</td>"+
       "<td><div class='rev'><div><b>"+money(v)+"</b>"+src+"</div><div class='scale' aria-hidden='true'><div class='zone' style='left:"+ZONE_L+"%;width:"+ZONE_W+"%'></div><div class='tick"+(inZone?" in":"")+"' style='left:"+pos(v)+"%'></div></div></div></td>"+
       "<td>"+approx+(r[F.rpd]>=10?"<span class='hot'>":"<span>")+r[F.rpd].toLocaleString("ru-RU",{maximumFractionDigits:1})+"</span></td>"+
       "<td class='dim'>"+num(r[F.dl])+"</td>"+
@@ -282,34 +319,61 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
     "</tr>";
   }
 
+  function nicheHtml(n){
+    const hi=(v,good)=>(good?"<span class='hot'>":"<span>")+num(v)+"</span>";
+    const best=n[NF.bid]?"<a href='https://apps.apple.com/us/app/id"+n[NF.bid]+"' target='_blank' rel='noopener'>"+esc(n[NF.bname])+"</a><span>"+money(n[NF.brev])+" в месяц</span>":"<span>—</span>";
+    return "<tr>"+
+      "<td class='l'><b>"+esc(n[NF.kw])+"</b></td>"+
+      "<td class='cat l'>"+esc(n[NF.grp])+"</td>"+
+      "<td>"+hi(n[NF.newe],n[NF.newe]>0)+"</td>"+
+      "<td>"+hi(n[NF.weak],n[NF.weak]>=5)+"</td>"+
+      "<td>"+num(n[NF.earn])+"</td>"+
+      "<td>"+money(n[NF.tot])+"</td>"+
+      "<td class='dim'>"+num(n[NF.stud])+"</td>"+
+      "<td>"+(n[NF.lrat]?String(n[NF.lrat]).replace(".",","):"—")+"</td>"+
+      "<td>"+hi(n[NF.stale],n[NF.stale]>0)+"</td>"+
+      "<td class='app l'>"+best+"</td>"+
+    "</tr>";
+  }
+
   function update(){
     view=sortRows(filtered());
     const pages=Math.max(1,Math.ceil(view.length/PAGE));
     state.page=Math.min(state.page,pages-1);
     const slice=view.slice(state.page*PAGE,(state.page+1)*PAGE);
+    const span=(isN()?NCOLS:COLS).length;
     if(!rows.length){
-      $("body").innerHTML="<tr><td colspan='"+COLS.length+"' class='empty'><b>Данных пока нет.</b><br>Запустите сбор: вкладка Actions в репозитории → «Сбор данных» → Run workflow. Через 30–60 минут обновите эту страницу.</td></tr>";
+      $("body").innerHTML="<tr><td colspan='"+span+"' class='empty'><b>Данных пока нет.</b><br>Запустите сбор: вкладка Actions в репозитории → «Сбор данных» → Run workflow. Через 30–60 минут обновите эту страницу.</td></tr>";
+    } else if(isN() && !niches.length){
+      $("body").innerHTML="<tr><td colspan='"+span+"' class='empty'><b>Ниш пока нет.</b><br>Они появляются по мере обхода поисковых запросов: каждый день проверяется часть запросов, полный круг — около двух недель.</td></tr>";
     } else if(!slice.length){
-      $("body").innerHTML="<tr><td colspan='"+COLS.length+"' class='empty'><b>Под эти фильтры ничего не подходит.</b><br>Ослабьте условия или нажмите «Сбросить».</td></tr>";
+      $("body").innerHTML="<tr><td colspan='"+span+"' class='empty'><b>Под эти фильтры ничего не подходит.</b><br>Ослабьте условия или нажмите «Сбросить».</td></tr>";
     } else {
-      $("body").innerHTML=slice.map(rowHtml).join("");
+      $("body").innerHTML=slice.map(isN()?nicheHtml:rowHtml).join("");
     }
-    $("count").textContent="Показано "+num(view.length)+" из "+num(state.tab==="cand"?(D.candidates||0):rows.length);
+    $("count").textContent="Показано "+num(view.length)+" из "+num(isN()?niches.length:state.tab==="cand"?(D.candidates||0):rows.length);
     $("pageinfo").textContent="стр. "+(state.page+1)+" из "+pages;
     $("b-prev").disabled=state.page===0; $("b-next").disabled=state.page>=pages-1;
     $("head").querySelectorAll("th").forEach(th=>{
       if(th.dataset.k===state.sort) th.setAttribute("aria-sort",state.dir<0?"descending":"ascending"); else th.removeAttribute("aria-sort");
     });
-    $("tabnote").textContent=state.tab==="cand"
-      ?"Молодые приложения (до 2 лет) с выручкой "+money(TARGET[0])+"–"+money(TARGET[1])+" в месяц, быстрым приростом оценок и небольшим общим числом оценок. Условия меняются в config.yaml."
+    $("tabnote").textContent=isN()
+      ?"Поисковые запросы и что происходит в первых "+TOP+" местах выдачи. Хорошая ниша: новички (до года) уже зарабатывают, много слабых мест, мало студий, лидеры давно не обновлялись."
+      :state.tab==="cand"
+      ?"Молодые приложения (до 2 лет) с выручкой "+money(TARGET[0])+"–"+money(TARGET[1])+" в месяц и небольшим общим числом оценок: либо оценки быстро растут, либо приложение зарабатывает много на одно скачивание. Тяжёлые жанры игр не показываются. Условия меняются в config.yaml."
       :"Все приложения с оценкой выручки от $1 тыс в месяц, включая чарты. Используйте фильтры, чтобы сузить список.";
   }
 
   function setTab(t){
+    if((t==="niche")!==isN()){ state.sort=t==="niche"?"newe":"rev"; state.dir=-1; }
     state.tab=t; state.page=0;
-    $("tab-cand").setAttribute("aria-selected",t==="cand"); $("tab-all").setAttribute("aria-selected",t==="all");
+    ["niche","cand","all"].forEach(x=>$("tab-"+x).setAttribute("aria-selected",t===x));
+    document.querySelectorAll(".apponly").forEach(el=>el.classList.toggle("hide",isN()));
+    $("q-label").textContent=isN()?"Поисковый запрос":"Название или разработчик";
+    renderHead();
     update();
   }
+  $("tab-niche").onclick=()=>setTab("niche");
   $("tab-cand").onclick=()=>setTab("cand");
   $("tab-all").onclick=()=>setTab("all");
 
@@ -322,15 +386,19 @@ details.help td,details.help th{font-size:13px;padding:4px 10px}
   $("b-next").onclick=()=>{state.page++; update(); window.scrollTo({top:0});};
 
   $("b-csv").onclick=()=>{
-    const head=["id","name","developer","category","revenue_usd_month","revenue_source","chart_rank","ratings_per_day","downloads_per_day","ratings_total","growth_month_pct","rating","price","iap_median","has_purchases","release","last_update","candidate","url"];
     const q=s=>'"'+String(s??"").replace(/"/g,'""')+'"';
-    const lines=view.map(r=>[r[F.id],q(r[F.name]),q(r[F.dev]),q(r[F.cat]),r[F.rev],r[F.src]||"",q(r[F.rank]),r[F.rpd],r[F.dl],r[F.cnt],(r[F.mom]*100).toFixed(1),r[F.rat],r[F.price],r[F.iap]??"",r[F.mon]??"",r[F.rel],r[F.upd],r[F.cand],"https://apps.apple.com/us/app/id"+r[F.id]].join(","));
+    const head=isN()
+      ?["keyword","category","new_earners","weak_spots","earners","top_revenue_usd_month","studios","top3_rating","top3_stale","best_new_app","best_new_revenue","best_new_url"]
+      :["id","name","developer","category","revenue_usd_month","revenue_source","chart_rank","ratings_per_day","downloads_per_day","ratings_total","growth_month_pct","rating","price","iap_median","has_purchases","release","last_update","candidate","high_rev_per_download","studio","url"];
+    const lines=isN()
+      ?view.map(n=>[q(n[NF.kw]),q(n[NF.grp]),n[NF.newe],n[NF.weak],n[NF.earn],n[NF.tot],n[NF.stud],n[NF.lrat]??"",n[NF.stale],q(n[NF.bname]),n[NF.brev]??"",n[NF.bid]?"https://apps.apple.com/us/app/id"+n[NF.bid]:""].join(","))
+      :view.map(r=>[r[F.id],q(r[F.name]),q(r[F.dev]),q(r[F.cat]),r[F.rev],r[F.src]||"",q(r[F.rank]),r[F.rpd],r[F.dl],r[F.cnt],(r[F.mom]*100).toFixed(1),r[F.rat],r[F.price],r[F.iap]??"",r[F.mon]??"",r[F.rel],r[F.upd],r[F.cand],r[F.eff],r[F.studio],"https://apps.apple.com/us/app/id"+r[F.id]].join(","));
     const blob=new Blob(["\ufeff"+head.join(",")+"\n"+lines.join("\n")],{type:"text/csv;charset=utf-8"});
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="app-niches-"+(D.updated||"data")+".csv";
     document.body.appendChild(a); a.click(); a.remove();
   };
 
-  update();
+  setTab(niches.length?"niche":"cand");
 })();
 </script>
 </body>

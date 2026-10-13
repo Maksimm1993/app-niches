@@ -304,7 +304,7 @@ def read_known():
     return out
 
 
-def search_keywords(apps, hist, meta, keywords):
+def search_keywords(apps, hist, meta, tops, keywords):
     if not keywords:
         return
     pos = meta.get("kw_pos", 0) % len(keywords)
@@ -316,6 +316,9 @@ def search_keywords(apps, hist, meta, keywords):
             break
         kw = keywords[(pos + k) % len(keywords)]
         data = get(SEARCH_URL, params={"term": kw, "country": "us", "entity": "software", "limit": 200})
+        if data is not None:
+            # первые места выдачи — для вкладки «Ниши»
+            tops[kw] = [TODAY_N, [str(r.get("trackId")) for r in data.get("results", [])[:CFG["niche_top"]]]]
         for r in (data or {}).get("results", []):
             if str(r.get("trackId")) not in apps and add_app(apps, hist, r, "search"):
                 added += 1
@@ -436,6 +439,29 @@ def explore_pages(apps, hist, order):
 # ---------------------------------------------------------------------------
 #  Этап 5. Расчёты
 # ---------------------------------------------------------------------------
+
+def game_sub(a):
+    """Основной жанр игры (Puzzle, Trivia…) или пустая строка."""
+    for g in a.get("gids", []):
+        if g.startswith("7"):
+            return GAME_GENRES.get(int(g), "")
+    return ""
+
+
+def group(a):
+    """Категория для фильтра на сайте."""
+    if a.get("cid") == 6014:
+        sub = game_sub(a)
+        if sub in CFG["heavy_game_genres"]:
+            return "Игры: тяжёлые"
+        return "Игры: " + sub if sub in CFG["site_game_genres"] else "Игры: другие"
+    return a.get("cat") if a.get("cat") in CFG["site_categories"] else "Другие"
+
+
+def groups():
+    return (CFG["site_categories"] + ["Игры: " + g for g in CFG["site_game_genres"]]
+            + ["Игры: другие", "Игры: тяжёлые", "Другие"])
+
 
 def growth(i, a, hist):
     """Новых оценок в день. Второе значение: True — по истории замеров, False — грубо, по возрасту."""
@@ -591,6 +617,7 @@ def compute(apps, hist, charts, chist, known):
     cap_cat = {g: scale[g] * len(ids) ** -B for g, ids in gross.items() if g != "all" and len(ids) >= 90}
 
     cc = CFG["candidates"]
+    heavy = CFG["heavy_game_genres"]
     for i, a in apps.items():
         m = res[i]
         if i in known:
@@ -610,14 +637,29 @@ def compute(apps, hist, charts, chist, known):
         m["rev"] = rev
         age = days_since(a.get("rel"))
         m["mom"] = m["rpd"] * 30 / max(a.get("cnt", 0), 1)
+        # Много денег на одно скачивание: выручка известна не по модели и намного выше,
+        # чем обычно бывает в категории при таком приросте оценок.
+        k = k_cat.get(a.get("cid"), global_k)
+        m["eff"] = m["src"] != "model" and rev >= CFG["eff_ratio"] * k * max(m["rpd"], 0.1) * 30
         m["cand"] = bool(
             age is not None and age <= cc["max_age_days"]
             and cc["min_revenue"] <= rev <= cc["max_revenue"]
-            and m["rpd"] >= cc["min_ratings_per_day"]
+            and (m["rpd"] >= cc["min_ratings_per_day"] or m["eff"])
             and a.get("cnt", 0) <= cc["max_total_ratings"]
             and (CFG["include_games"] or a.get("cid") != 6014)
+            and not (cc["hide_heavy_games"] and a.get("cid") == 6014 and game_sub(a) in heavy)
             and (a.get("mon") is not False or a.get("price", 0) > 0)  # бесплатное без покупок — не кандидат
         )
+
+    # Студии: у разработчика много приложений или большая общая выручка
+    devs = {}
+    for i, a in apps.items():
+        d = devs.setdefault(a.get("did"), [0, 0.0])
+        d[0] += 1
+        d[1] += res[i]["rev"]
+    for i, a in apps.items():
+        n, total = devs[a.get("did")]
+        res[i]["studio"] = bool(a.get("did")) and (n >= CFG["studio_min_apps"] or total >= CFG["studio_min_revenue"])
     return res, {"global_k": round(global_k, 1), "calib": calib, "chart_ok": bool(overall),
                  "check_chart": check_chart, "check_known": check_known,
                  "corr": round(corr, 2), "known_n": len(kn)}
@@ -644,7 +686,35 @@ def prune(apps, hist, res):
     log(f"  удалено пропавших из App Store: {len(gone)}, слабых: {max(extra, 0)}")
 
 
-def export(apps, res, info, meta, n_keywords, n_auto):
+def niches(apps, res, tops):
+    """Вкладка «Ниши»: что творится в первых местах выдачи по каждому поисковому запросу."""
+    lo = CFG["candidates"]["min_revenue"]
+    rows = []
+    for kw, (day, ids) in list(tops.items()):
+        if TODAY_N - day > CFG["niche_keep_days"]:
+            del tops[kw]
+            continue
+        top = [i for i in ids if i in apps and i in res]
+        rev = {i: res[i]["rev"] for i in top}
+        if sum(rev.values()) < CFG["export_min_revenue"]:
+            continue
+        new = [i for i in top if (days_since(apps[i].get("rel")) or 9999) <= CFG["niche_new_days"] and rev[i] >= lo]
+        best = max(new, key=rev.get) if new else None
+        lead = [apps[i] for i in ids[:3] if i in apps]
+        rows.append([
+            kw, statistics.mode(group(apps[i]) for i in top), round(sum(rev.values())),
+            sum(v >= lo for v in rev.values()),
+            len(new),
+            CFG["niche_top"] - sum(v >= 1000 for v in rev.values()),  # места, где зарабатывают меньше $1000 или пусто
+            sum(res[i]["studio"] for i in top),
+            round(statistics.mean(a.get("rat", 0) for a in lead), 1) if lead else None,
+            sum((days_since(a.get("upd")) or 0) > 365 for a in lead),
+            int(best) if best else None, apps[best]["n"] if best else "", round(rev[best]) if best else None,
+        ])
+    return rows
+
+
+def export(apps, res, info, meta, n_keywords, n_auto, niche_rows):
     dpr = CFG["downloads_per_rating"]
     rows = []
     for i, a in apps.items():
@@ -653,12 +723,14 @@ def export(apps, res, info, meta, n_keywords, n_auto):
             continue
         if not (m["chart"] or m["cand"] or m["src"] == "known" or m["rev"] >= CFG["export_min_revenue"]):
             continue
+        sub = game_sub(a)
         rows.append([
-            int(i), a.get("n", ""), a.get("dev", ""), a.get("cat", ""), a.get("price", 0),
+            int(i), a.get("n", ""), a.get("dev", ""), a.get("cat", "") + (" · " + sub if sub else ""), a.get("price", 0),
             a.get("cnt", 0), a.get("rat", 0), round(m["rpd"], 2), 1 if m["hist"] else 0,
             round(m["rev"]), 1 if m["chart"] else 0, m["rank"], a.get("rel", ""), a.get("upd", ""),
             round(m["mom"], 4), 1 if m["cand"] else 0, a.get("iap"), round(m["rpd"] * dpr),
             {True: 1, False: 0}.get(a.get("mon")), m["src"], m.get("url"),
+            group(a), 1 if m["studio"] else 0, 1 if m["eff"] else 0,
         ])
     rows.sort(key=lambda r: -r[9])
     rows = rows[: CFG["export_max_rows"]]
@@ -678,12 +750,15 @@ def export(apps, res, info, meta, n_keywords, n_auto):
         "corr": info.get("corr"),
         "known_n": info.get("known_n"),
         "target": [CFG["candidates"]["min_revenue"], CFG["candidates"]["max_revenue"]],
+        "groups": groups(),
+        "niche_top": CFG["niche_top"],
         "rows": rows,
+        "niches": niche_rows,
     }
     SITE.mkdir(exist_ok=True)
     js = "window.APP_DATA = " + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";\n"
     (SITE / "data.js").write_text(js, encoding="utf-8")
-    log(f"  на сайт выгружено {len(rows)} приложений, кандидатов: {data['candidates']}")
+    log(f"  на сайт выгружено {len(rows)} приложений, кандидатов: {data['candidates']}, ниш: {len(niche_rows)}")
 
 
 # ---------------------------------------------------------------------------
@@ -698,6 +773,7 @@ def main():
     auto = load("keywords_auto.json", [])
     meta.setdefault("first_day", TODAY_N)
     chist = load("chart_history.json", {})
+    tops = load("keyword_tops.json", {})
     base = read_keywords()
     known = read_known()
     log(f"В базе {len(apps)} приложений, запросов: {len(base)} своих + {len(auto)} авто, "
@@ -707,7 +783,7 @@ def main():
     save("charts.json", charts)
     phase("Приложения с известной выручкой", lookup, list(known), apps, hist, "known", frozenset(known))
 
-    phase("Поиск по ключевым словам", search_keywords, apps, hist, meta,
+    phase("Поиск по ключевым словам", search_keywords, apps, hist, meta, tops,
           list(dict.fromkeys(base + auto)))
     phase("Автоподсказки App Store", expand_keywords, apps, meta, base, auto)
 
@@ -727,9 +803,11 @@ def main():
     if final:
         res, info = final
         phase("Чистка базы", prune, apps, hist, res)
-        phase("Выгрузка для сайта", export, apps, res, info, meta, len(base) + len(auto), len(auto))
+        niche_rows = phase("Ниши", niches, apps, res, tops) or []
+        phase("Выгрузка для сайта", export, apps, res, info, meta, len(base) + len(auto), len(auto), niche_rows)
 
     save("apps.json", apps)
+    save("keyword_tops.json", tops)
     save("history.json", hist)
     save("meta.json", meta)
     save("keywords_auto.json", auto)
